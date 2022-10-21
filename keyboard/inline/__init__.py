@@ -1,0 +1,2 @@
+from .hotel_with_foto import inline_button_hotel_with_foto
+from .hotel_without_foto import inline_hotel_without_foto

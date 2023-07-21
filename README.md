@@ -15,10 +15,10 @@
 
 
 ## Запуск
-- Создать виртуальное окружение: python -m venv venv
-- Установить нужные библиотеки. pip install -r requirements.txt
+- Создать виртуальное окружение: `python -m venv venv`
+- Установить нужные библиотеки. `pip install -r requirements.txt`
 - Создать .env файл и внести в него токен своего бота и api. Пример: env.template
-- Запустить бота: python main.py
+- Запустить бота: `python main.py`
 
 ## Описание работа команд
 

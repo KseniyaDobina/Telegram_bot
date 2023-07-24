@@ -48,4 +48,3 @@ class UserCard(StatesGroup):
     """
     id = State()
     command = State()
-    date_and_time = State()

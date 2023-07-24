@@ -1,105 +1,87 @@
 import sqlite3 as sq
+import datetime
+# from .models import User, CommandHistory, Hotel
+from peewee import *
+
+db = SqliteDatabase('bot.db')
+
+
+class GeneralModel(Model):
+    class Meta:
+        database = db
+
+
+class User(GeneralModel):
+    id_telegram = IntegerField()
+
+
+class CommandHistory(GeneralModel):
+    user = ForeignKeyField(User)
+    command = CharField()
+    date = DateField(default=datetime.datetime.now())
+    town = CharField()
+
+
+class Hotel(GeneralModel):
+    command = ForeignKeyField(CommandHistory)
+    name = CharField()
+    link = CharField()
 
 
 def create_tables():
     """
     Создает три таблицы: users, commands_history, hotels.
     """
-    with sq.connect('base.db') as db:
-        db.execute("PRAGMA foreign_keys = 1")
-        cur = db.cursor()
 
-        cur.execute("""CREATE TABLE IF NOT EXISTS users (
-                user_id INTEGER PRIMARY KEY,
-                id_telegram INTEGER NOT NULL,
-                FOREIGN KEY (user_id) REFERENCES commands_history(user_id)
-                )""")
-
-        cur.execute("""CREATE TABLE IF NOT EXISTS commands_history (
-                user_id INTEGER NOT NULL,
-                command_id INTEGER PRIMARY KEY, 
-                command TEXT NOT NULL,
-                date INTEGER NOT NULL,
-                town TEXT NOT NULL,
-                FOREIGN KEY (command_id) REFERENCES hotels(command_id)
-                )""")
-
-        cur.execute("""CREATE TABLE IF NOT EXISTS hotels (
-                command_id INTEGER,
-                hotel_name TEXT NOT NULL,
-                link TEXT NOT NULL
-                )""")
-
-
-def delete_tables():
-    """
-    Удаляет все таблицы.
-    """
-    with sq.connect('base.db') as db:
-        cur = db.cursor()
-        cur.execute("DROP TABLE users")
-        cur.execute("DROP TABLE commands_history")
-        cur.execute("DROP TABLE hotels")
+    tables = [User, CommandHistory, Hotel]
+    if not all(table.table_exists() for table in tables):
+        db.create_tables(tables)  # создаем таблицы
+        print('Таблицы созданы успешно.')
+        # logger.debug('Таблицы созданы успешно.')
+    else:
+        print('Таблицы уже существуют.')
+        # logger.debug('Таблицы уже существуют.')
 
 
 def check_user(id_user):
     """
-    Проверяет наличие пользователя в базе данных. При отсутвии пользователя в бд, добавляет его.
+    Проверяет наличие пользователя в базе данных. При отсутствии пользователя в бд, добавляет его.
     При наличии возвращает id пользователя в бд.
-    :param id_user: id пользователя в телеграмме
+    :param id_user: Id пользователя в телеграмме
     :return: присвоенный пользователю id
     """
-    with sq.connect('base.db') as db:
-        cur = db.cursor()
-        cur.execute(f"SELECT user_id FROM users WHERE id_telegram = {id_user}")
-        find_user = cur.fetchall()
-        if find_user:
-            for id_count in find_user:
-                return id_count[0]
-
-        else:
-            cur.execute(f"INSERT INTO users ('user_id', 'id_telegram')"
-                        f" VALUES((SELECT max(user_id) FROM users) + 1, {id_user})")
-            cur.execute(f"SELECT user_id FROM users WHERE id_telegram = {id_user}")
-            for id_count in cur.fetchall():
-                return id_count[0]
+    try:
+        user = User.get(User.id_telegram == id_user)
+        return user.id
+    except User.DoesNotExist:
+        user = User(id_telegram=id_user)
+        user.save()
+        return user.id
 
 
-def add_commands(user_id, command, date, town):
+def add_commands(user_id, command, town):
     """
-    Добавляет новую команду, а также дату с временем, когда была введена команда, и город, где производился поиск.
-    :param user_id: id пользователя в базе данных
+    Добавляет новую команду и город, где производился поиск.
+    :param user_id: Id пользователя в базе данных
     :param command: Название команды
-    :param date: Дата и время
     :param town: Город
     :return: id добавленной команды
     """
-    with sq.connect('base.db') as db:
-        cur = db.cursor()
-        cur.execute(f"SELECT max(command_id) FROM commands_history")
-        for count in cur.fetchall():
-            if count[0]:
-                id_count = count[0]
 
-            else:
-                id_count = 0
-
-        cur.execute(f"INSERT INTO commands_history ('user_id', 'command_id', 'command', 'date', 'town')"
-                    f" VALUES({user_id}, {id_count} + 1, '{command}', '{date}', '{town}')")
-        return id_count + 1
+    new_command = CommandHistory(user=user_id, command=command, town=town)
+    new_command.save()
+    return new_command.id
 
 
 def add_hotels(command_id, hotel_name, link):
     """
     Добавляет отель.
-    :param command_id: id команды
+    :param command_id: Id команды
     :param hotel_name: Название отеля
     :param link: Ссылка на отель
     """
-    with sq.connect('base.db') as db:
-        cur = db.cursor()
-        cur.execute(f"INSERT INTO hotels ('command_id', 'hotel_name', 'link') "
-                    f"VALUES({command_id}, '{hotel_name}', '{link}')")
+    new_hotel = Hotel(command=command_id, name=hotel_name, link=link)
+    new_hotel.save()
 
 
 def list_commands(user_id):

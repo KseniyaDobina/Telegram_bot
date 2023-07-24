@@ -1,6 +1,6 @@
 from telebot.types import Message
 from loader import bot
-from db import db
+from db_sqlite import db_functions
 from states import UserCard
 
 
@@ -8,9 +8,9 @@ from states import UserCard
 def bot_start(message: Message):
     """
     Отправляет сообщение приветствия пользователю.
-    :param message: сообщение из бота
+    :param message: Сообщение из бота
     """
-    db.check_user(message.from_user.id)
+    db_functions.check_user(message.from_user.id)
     UserCard.id = message.from_user.id
     bot.send_message(message.chat.id, f"Привет, {message.from_user.full_name}!"
                                       f"\nЧтобы использовать бота, вам нужно выбрать команду."

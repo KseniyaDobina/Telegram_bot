@@ -4,11 +4,12 @@ from telebot.types import Message, ReplyKeyboardMarkup, ReplyKeyboardRemove, Inl
     InlineKeyboardButton, InputMediaPhoto, CallbackQuery
 from telegram_bot_calendar import DetailedTelegramCalendar
 
+from db_sqlite.models import Hotel
 from loader import bot
 from states import TownCard, UserCard
 from config_data import config, parse, hotel_info
 from keyboard import inline
-from db import db
+from db_sqlite import db_functions
 
 
 @bot.message_handler(commands=['lowprice'])
@@ -17,7 +18,7 @@ def first_question(message: Message):
     Добавляет id пользователя и дату.
     :param message: Сообщение из бота
     """
-    UserCard.id = db.check_user(message.from_user.id)
+    UserCard.id = db_functions.check_user(message.from_user.id)
     UserCard.command = 'lowprice'
     UserCard.date_and_time = datetime.datetime.now()
     ask = bot.send_message(message.chat.id, 'В каком городе смотрим отели?')
@@ -30,7 +31,7 @@ def first_question(message: Message):
     Добавляет id пользователя и дату.
     :param message: Сообщение из бота
     """
-    UserCard.id = db.check_user(message.from_user.id)
+    UserCard.id = db_functions.check_user(message.from_user.id)
     UserCard.command = 'highprice'
     UserCard.date_and_time = datetime.datetime.now()
     ask = bot.send_message(message.chat.id, 'В каком городе смотрим отели?')
@@ -43,7 +44,7 @@ def first_question(message: Message):
     Добавляет id пользователя и дату.
     :param message: Сообщение из бота
     """
-    UserCard.id = db.check_user(message.from_user.id)
+    UserCard.id = db_functions.check_user(message.from_user.id)
     UserCard.command = 'bestdeal'
     UserCard.date_and_time = datetime.datetime.now()
     ask = bot.send_message(message.chat.id, 'В каком городе смотрим отели?')
@@ -392,7 +393,7 @@ def saving_history(call: CallbackQuery):
     Сохраняет в базу данных команду и отели.
     :param call: Сообщение из бота
     """
-    new_command_id = db.add_commands(UserCard.id, UserCard.command, TownCard.town)
+    new_command_id = db_functions.add_commands(UserCard.id, UserCard.command, TownCard.town)
     days = TownCard.to_date - TownCard.from_date
     hotel, price, text = hotel_info.get_info_about_hotel(TownCard.hotel_list[TownCard.hotel_number], days)
     bot.delete_message(call.message.chat.id, call.message.message_id)
@@ -414,4 +415,5 @@ def saving_history(call: CallbackQuery):
     else:
         bot.send_message(call.message.chat.id, text)
     for hotel_count in TownCard.hotel_list:
-        db.add_hotels(new_command_id, hotel_count['name'], f"hotels.com/h{hotel_count['id']}.Hotel-Information")
+        Hotel.create(command=new_command_id, name=hotel_count['name'],
+                     link=f"hotels.com/h{hotel_count['id']}.Hotel-Information")

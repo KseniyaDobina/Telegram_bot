@@ -1,9 +1,9 @@
 from loader import bot
 import handlers
 from utils.set_bot_commands import set_default_commands
-from db import db
+from db_sqlite import db_functions
 
 if __name__ == '__main__':
-    db.create_tables()
+    db_functions.create_tables()
     set_default_commands(bot)
     bot.infinity_polling()

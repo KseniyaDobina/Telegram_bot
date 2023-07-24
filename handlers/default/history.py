@@ -1,7 +1,8 @@
 from telebot.types import Message
 
+from db_sqlite import db_functions
+from db_sqlite.models import CommandHistory, Hotel
 from loader import bot
-from db import db
 from states import UserCard
 
 
@@ -9,18 +10,21 @@ from states import UserCard
 def bot_start(message: Message):
     """
     Отправляет историю поиска отелей.
-    :param message: сообщение из бота
+    :param message: Сообщение из бота
     """
-    UserCard.id = db.check_user(message.from_user.id)
-    history = db.list_commands(UserCard.id)
+    UserCard.id = db_functions.check_user(message.from_user.id)
+    history = db_functions.list_commands(UserCard.id)
     if history:
         history_text = '*История запросов:*'
-        for i in history:
-            history_text += f"\n\n*Команда: {i[1]}\nДата и время ввода команды: {i[2]}*" \
-                           f"\nГород, в котором произодился поиск: {i[3]}"
-            for id_count, hotel in enumerate(db.list_hotels(i[0])):
-                history_text += f"\n\n\t\t\t\t{id_count + 1}) Название отеля: {hotel[0]}" \
-                                f"\n\t\t\t\tСсылка на отель: {hotel[1]}"
+        for command_id in history:
+            command = CommandHistory.get(id=command_id)
+            history_text += f"\n\n*Команда: /{command.command}\nДата и время ввода команды: {command.date}*" \
+                            f"\nГород, в котором производился поиск: {command.town}"
+
+            for id_hotel in Hotel.filter(command=command_id):
+                hotel = Hotel.get(id=id_hotel)
+                history_text += f"\n\n\t\t\t\t{hotel.id}) Название отеля: {hotel.name}" \
+                                f"\n\t\t\t\tСсылка на отель: {hotel.link}"
 
         bot.send_message(message.chat.id, history_text, parse_mode='Markdown')
 

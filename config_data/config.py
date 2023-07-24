@@ -14,10 +14,10 @@ HEADERS = {
     'X-RapidAPI-Key': API_KEY,
     'X-RapidAPI-Host': API_HOST,
 }
-FIRST_ENDPOINTS = '/locations/v2/search'
-SECOND_ENDPOINTS = '/properties/list'
+FIRST_ENDPOINTS = '/locations/v3/search'
+SECOND_ENDPOINTS = '/properties/v2/list'
 THIRD_ENDPOINTS = '/properties/get-hotel-photos'
-LIST_SORT = ('PRICE', 'PRICE_HIGHEST_FIRST', 'DISTANCE_FROM_LANDMARK')
+LIST_SORT = ('PRICE_LOW_TO_HIGH', 'PRICE_HIGH_TO_LOW', 'DISTANCE')
 DEFAULT_COMMANDS = [
     ('start', 'Запустить бота'),
     ('help', 'Вывести справку'),

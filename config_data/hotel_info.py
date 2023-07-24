@@ -1,9 +1,9 @@
 def check_address(check_hotel):
     """
     Проверяет наличие у отеля адреса.
-    :param check_hotel: проверяемый отель
-    :return: Если адрес присутствет, то возвращается строка с адресом,
-    если нет, то возвращается строка с коодинатами отеля.
+    :param check_hotel: Проверяемый отель
+    :return: Если адрес присутствует, то возвращается строка с адресом,
+    если нет, то возвращается строка с координатами отеля.
     """
     try:
         address = check_hotel['address']['streetAddress']
@@ -18,14 +18,14 @@ def check_address(check_hotel):
 def check_price(check_hotel, days):
     """
     Проверяет наличие у отеля цены.
-    :param check_hotel: проверяемый отель
+    :param check_hotel: Проверяемый отель
     :param days: дни
-    :return: Если цена присутствет, то возвращается строка с ценой в сутки и суммарная за все дни, а так же сама цена.
+    :return: Если цена присутствует, то возвращается строка с ценой в сутки и суммарная за все дни, а так же сама цена.
     Если цена отсутствует, то возвращаются строка о том, что цены нет,
     а так же 0.
     """
     try:
-        price = check_hotel['ratePlan']['price']['current']
+        price = check_hotel['price']['options'][0]['formattedDisplayPrice']
         if ',' in price:
             price = int(''.join(price[1:].split(',')))
 
@@ -42,13 +42,15 @@ def check_price(check_hotel, days):
 def check_center(check_hotel):
     """
     Проверяет наличие у отеля расположения до центра.
-    :param check_hotel: проверяемый отель
-    :return: Если расположение до центр присутствет, то возвращается строка с расположением до центра.
+    :param check_hotel: Проверяемый отель
+    :return: Если расположение до центра присутствует, то возвращается строка с расположением до центра.
     Если цена отсутствует, то возвращаются строка о том, расположение до центра нет.
     """
-    if check_hotel['landmarks'][0]['label'] == 'City center':
-        return f"\nРасположение до центра: {check_hotel['landmarks'][0]['distance']}"
-    return '\nУ отеля не указано расстояние до центра города (отель может находиться уже в центре города)'
+    try:
+        return (f"\nРасположение до центра: {check_hotel['destinationInfo']['distanceFromDestination']['value']} "
+                f"километров.")
+    except KeyError:
+        return '\nУ отеля не указано расстояние до центра города (отель может находиться уже в центре города)'
 
 
 def get_info_about_hotel(hotel, days):
@@ -59,9 +61,9 @@ def get_info_about_hotel(hotel, days):
     :return: описание отеля
     """
     price = check_price(hotel, days)
+    #        f"{check_address(hotel)}" \
     text = f"Название отеля: {hotel['name']}" \
-           f"{check_address(hotel)}" \
            f"{check_center(hotel)}" \
            f"{price[0]}" \
-           f"\nСсылка на отель: hotels.com/ho{hotel['id']}"
+           f"\nСсылка на отель: hotels.com/h{hotel['id']}.Hotel-Information"
     return hotel, price[1], text

@@ -3,15 +3,15 @@ from telebot.handler_backends import State, StatesGroup
 
 class TownCard(StatesGroup):
     """
-    Класс города, в котором происходит поск информации
+    Класс города, в котором происходит поиск информации
     Атрибуты:
         town: город
         list_key: список id районов в городе
         destination_id: id района в городе
         min_price: минимальная цена
-        max_price: максимальная уена
+        max_price: максимальная цена
         max_landmark: максимальное расстояние до центра
-        min_date: дата, для конроля функции календаря
+        min_date: дата, для контроля функции календаря
         from_date: дата въезда
         from_date_control: контроль за выбором даты из календаря
         to_date: дата выезда

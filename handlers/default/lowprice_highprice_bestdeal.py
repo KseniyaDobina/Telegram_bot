@@ -15,12 +15,12 @@ from db import db
 def first_question(message: Message):
     """
     Добавляет id пользователя и дату.
-    :param message: сообщение из бота
+    :param message: Сообщение из бота
     """
     UserCard.id = db.check_user(message.from_user.id)
     UserCard.command = 'lowprice'
     UserCard.date_and_time = datetime.datetime.now()
-    ask = bot.send_message(message.chat.id, 'В каком городе смотрим отели? (название города на английском языке)')
+    ask = bot.send_message(message.chat.id, 'В каком городе смотрим отели?')
     bot.register_next_step_handler(ask, find_neighborhood)
 
 
@@ -28,12 +28,12 @@ def first_question(message: Message):
 def first_question(message: Message):
     """
     Добавляет id пользователя и дату.
-    :param message: сообщение из бота
+    :param message: Сообщение из бота
     """
     UserCard.id = db.check_user(message.from_user.id)
     UserCard.command = 'highprice'
     UserCard.date_and_time = datetime.datetime.now()
-    ask = bot.send_message(message.chat.id, 'В каком городе смотрим отели? (название города на английском языке)')
+    ask = bot.send_message(message.chat.id, 'В каком городе смотрим отели?')
     bot.register_next_step_handler(ask, find_neighborhood)
 
 
@@ -41,34 +41,35 @@ def first_question(message: Message):
 def first_question(message: Message):
     """
     Добавляет id пользователя и дату.
-    :param message: сообщение из бота
+    :param message: Сообщение из бота
     """
     UserCard.id = db.check_user(message.from_user.id)
     UserCard.command = 'bestdeal'
     UserCard.date_and_time = datetime.datetime.now()
-    ask = bot.send_message(message.chat.id, 'В каком городе смотрим отели? (название города на английском языке)')
+    ask = bot.send_message(message.chat.id, 'В каком городе смотрим отели?')
     bot.register_next_step_handler(ask, find_neighborhood)
 
 
 def find_neighborhood(message: Message):
     """
     Находит районы города и выводит inline клавиатуру.
-    :param message: сообщение из бота
+    :param message: Сообщение из бота
     """
     answer = message.text.lower()
     TownCard.town = answer
-    querystring = {'query': TownCard.town, 'locale': 'en_US', 'currency': 'USD'}
+    querystring = {'q': TownCard.town, 'locale': 'ru_RU', 'currency': 'USD', "siteid": "300000001"}
     data = parse.request_to_api(url=config.RAPID_URL + config.FIRST_ENDPOINTS,
                                 headers=config.HEADERS,
                                 params=querystring)
     neighborhood = {}
     try:
-        if len(data['suggestions'][0]['entities']) == 0:
+        if len(data['sr']) == 0:
+            print(data)
             raise KeyError
 
-        for i in data['suggestions'][0]['entities']:
-            if not i['name'] in neighborhood.values():
-                neighborhood[i['destinationId']] = i['name']
+        for region in data['sr']:
+            if not region['regionNames']['shortName'] in neighborhood.values():
+                neighborhood[region['gaiaId']] = region['regionNames']['shortName']
 
         TownCard.list_key = neighborhood
         destinations = InlineKeyboardMarkup()
@@ -79,13 +80,11 @@ def find_neighborhood(message: Message):
         bot.send_message(message.from_user.id, 'Уточните, пожалуйста:', reply_markup=destinations)
 
     except KeyError:
-        ask = bot.send_message(message.chat.id, 'Я не могу найти отели в этом городе, пожалуйста введите другой'
-                                                ' (название города на английском языке)')
+        ask = bot.send_message(message.chat.id, 'Я не могу найти отели в этом городе, пожалуйста введите другой.')
         bot.register_next_step_handler(ask, find_neighborhood)
     except TypeError:
-        ask = bot.send_message(message.chat.id, 'Я не могу найти отели в этом городе, пожалуйста введите другой или'
-                                                ' ввести название города по-другому'
-                                                ' (название города на английском языке)')
+        ask = bot.send_message(message.chat.id, 'Я не могу найти отели в этом городе, пожалуйста введите другой или '
+                                                'попробуйте ввести название города иначе.')
         bot.register_next_step_handler(ask, find_neighborhood)
 
 
@@ -93,18 +92,18 @@ def find_neighborhood(message: Message):
 def find_destination_id(call):
     """
     Сохраняет выбранный район.
-    :param call: сообщение из бота
+    :param call: Сообщение из бота
     """
     answer = call.data
     TownCard.destination_id = answer
     bot.edit_message_text(f'Вы выбрали {TownCard.list_key[answer]}',
                           call.message.chat.id,
                           call.message.message_id)
-    if parse.sort_hotels(UserCard.command) == 'DISTANCE_FROM_LANDMARK':
+    if parse.sort_hotels(UserCard.command) == 'DISTANCE':
         ask = bot.send_message(call.message.chat.id, 'Введите минимальную стоимость в сутки')
         bot.register_next_step_handler(ask, min_price)
     else:
-        bot.send_message(call.message.chat.id, 'Выберите дату, когда Вы въедите в отель')
+        bot.send_message(call.message.chat.id, 'Выберите дату, когда Вы въедете в отель')
         TownCard.min_date = datetime.date.today()
         calendar, step = DetailedTelegramCalendar(locale='ru', min_date=TownCard.min_date).build()
         bot.send_message(call.message.chat.id,
@@ -115,7 +114,7 @@ def find_destination_id(call):
 def min_price(message):
     """
     Сохраняет минимальную стоимость.
-    :param message: сообщение из бота
+    :param message: Сообщение из бота
     """
     answer = message.text
     if int(answer) < 0:
@@ -135,7 +134,7 @@ def min_price(message):
 def max_price(message):
     """
     Сохраняет максимальную стоимость.
-    :param message: сообщение из бота
+    :param message: Сообщение из бота
     """
     answer = message.text
     if int(answer) <= int(TownCard.min_price):
@@ -150,8 +149,8 @@ def max_price(message):
 
 def max_landmark(message):
     """
-    Сохраняет максимальную расстояние до центра.
-    :param message: сообщение из бота
+    Сохраняет максимальное расстояние до центра.
+    :param message: Сообщение из бота
     """
     answer = message.text
     if float(answer) < 0:
@@ -170,8 +169,8 @@ def max_landmark(message):
 @bot.callback_query_handler(func=DetailedTelegramCalendar.func())
 def callback_calendar(callback):
     """
-    Сохраняет дату вЪезда и выезда.
-    :param callback: сообщение из бота
+    Сохраняет дату въезда и выезда.
+    :param callback: Сообщение из бота
     """
     lstep = {'y': 'год', 'm': 'месяц', 'd': 'день'}
     result, key, step = DetailedTelegramCalendar(locale='ru', min_date=TownCard.min_date).process(callback.data)
@@ -208,7 +207,7 @@ def callback_calendar(callback):
 def check_foto(message: Message):
     """
     Запрашивает количество фото.
-    :param message: сообщение из бота
+    :param message: Сообщение из бота
     """
     answer = message.text
     if answer == "Да ✅":
@@ -233,91 +232,131 @@ def check_foto(message: Message):
 def number_of_foto(message: Message):
     """
     Сохраняет количество фото.
-    :param message: сообщение из бота
+    :param message: Сообщение из бота
     """
-    answer = int(message.text)
-    if answer < 1:
-        ask = bot.send_message(message.chat.id, "Вы ввели количество меньше 1,"
-                                                " чтобы увидеть фотографии отеля,"
-                                                " нужно ввести число больше или равное 1")
-        bot.register_next_step_handler(ask, number_of_foto)
+    if message.text.isdigit():
+        answer = int(message.text)
+        if answer < 1:
+            ask = bot.send_message(message.chat.id, "Вы ввели количество меньше 1,"
+                                                    " чтобы увидеть фотографии отеля,"
+                                                    " нужно ввести число больше или равное 1")
+            bot.register_next_step_handler(ask, number_of_foto)
 
-    elif answer > 5:
-        TownCard.foto = answer
-        ask = bot.send_message(message.chat.id, "Я могу вывести максимум пять фото, пожалуйста введите чило меньше")
-        bot.register_next_step_handler(ask, number_of_foto)
+        elif answer > 5:
+            TownCard.foto = answer
+            ask = bot.send_message(message.chat.id, "Я могу вывести максимум пять фото, пожалуйста введите число"
+                                                    " меньше")
+            bot.register_next_step_handler(ask, number_of_foto)
 
+        else:
+            TownCard.foto = answer
+            ask = bot.send_message(message.chat.id, "Сколько Вы хотите видеть отелей (максимум 25)")
+            bot.register_next_step_handler(ask, find_hotels)
     else:
-        TownCard.foto = answer
-        ask = bot.send_message(message.chat.id, "Сколько Вы хотите видеть отелей (максимум 25)")
-        bot.register_next_step_handler(ask, find_hotels)
+        ask = bot.send_message(message.chat.id, "Количество фото должно быть числом от 1 до 5.")
+        bot.register_next_step_handler(ask, number_of_foto)
 
 
 def find_hotels(message: Message):
     """
     Находит отели по всем запросам и выводит их.
-    :param message: сообщение из бота
+    :param message: Сообщение из бота
     """
-    answer = message.text
-    if int(answer) < 1:
-        ask = bot.send_message(message.chat.id, "Я не могу вывести меньше одного отеля,"
-                                                " введите число больше или равное 1")
-        bot.register_next_step_handler(ask, find_hotels)
+    if message.text.isdigit():
+        answer = message.text
+        if int(answer) < 1:
+            ask = bot.send_message(message.chat.id, "Я не могу вывести меньше одного отеля,"
+                                                    " введите число больше или равное 1")
+            bot.register_next_step_handler(ask, find_hotels)
 
-    elif int(answer) > 25:
-        TownCard.foto = answer
-        ask = bot.send_message(message.chat.id, "Я могу вывести максимум 25 отелей, пожалуйста введите чило меньше")
-        bot.register_next_step_handler(ask, find_hotels)
+        elif int(answer) > 25:
+            TownCard.foto = answer
+            ask = bot.send_message(message.chat.id, "Я могу вывести максимум 25 отелей, пожалуйста введите число "
+                                                    "меньше")
+            bot.register_next_step_handler(ask, find_hotels)
 
+        else:
+            bot.send_message(message.chat.id, "Подождите, идёт загрузка", reply_markup=ReplyKeyboardRemove())
+            in_date = TownCard.from_date
+            out_date = TownCard.to_date
+            payload = {
+                "currency": "USD",
+                "eapid": 1,
+                "locale": "ru_RU",
+                "siteId": 300000001,
+                "destination": {"regionId": str(TownCard.destination_id)},
+                "checkInDate": {
+                    "day": int(in_date.day),
+                    "month": int(in_date.month),
+                    "year": int(in_date.year)
+                },
+                "checkOutDate": {
+                    "day": int(out_date.day),
+                    "month": int(out_date.month),
+                    "year": int(out_date.year)
+                },
+                "rooms": [{"adults": 1}],
+                "resultsStartingIndex": 0,
+                "resultsSize": int(answer),
+                "sort": parse.sort_hotels(UserCard.command),
+                "filters": {"availableFilter": "SHOW_AVAILABLE_ONLY"}
+                # "filters": {"price": {
+                #     "max": 150,
+                #     "min": 100
+                # }}
+            }
+            if type(TownCard.max_price) == str and type(TownCard.min_price) == str:
+                if TownCard.min_price == '0':
+                    print(314)
+                    # querystring['priceMin'] = '1'
+                else:
+                    print(317)
+                    # querystring['priceMin'] = TownCard.min_price
+                print(319)
+                # querystring['priceMax'] = TownCard.max_price
+
+            try:
+                answer = parse.request_to_api(url=config.RAPID_URL + config.SECOND_ENDPOINTS,
+                                              headers=config.HEADERS,
+                                              params=payload,
+                                              post=True)
+                # print(answer)
+                TownCard.hotel_list = answer["data"]["propertySearch"]["properties"]
+                if parse.sort_hotels(UserCard.command) == config.LIST_SORT[2]:
+                    TownCard.hotel_list = parse.check_centre(TownCard.hotel_list)
+                if len(TownCard.hotel_list) == 0:
+                    raise KeyError
+                TownCard.hotel_number = 0
+                days = TownCard.to_date - TownCard.from_date
+                hotel, price, text = hotel_info.get_info_about_hotel(TownCard.hotel_list[TownCard.hotel_number], days)
+                if TownCard.foto == 0:
+                    markup = inline.inline_hotel_without_foto()
+                    bot.send_message(message.chat.id, 'Выберите отель')
+                    bot.send_message(message.chat.id, text, reply_markup=markup)
+
+                else:
+                    TownCard.foto_list = parse.request_to_api(config.RAPID_URL + config.THIRD_ENDPOINTS,
+                                                              headers=config.HEADERS,
+                                                              params={"id": hotel['id']})["hotelImages"][:TownCard.foto]
+                    TownCard.foto_number = 0
+                    markup = inline.inline_button_hotel_with_foto()
+                    foto = TownCard.foto_list[TownCard.foto_number]["baseUrl"].format(
+                        size=TownCard.foto_list[TownCard.foto_number]["sizes"][0]["suffix"]
+                    )
+                    bot.send_message(message.chat.id, 'Выберите отель')
+                    bot.send_photo(message.chat.id, foto, caption=text, reply_markup=markup)
+            except KeyError:
+                bot.send_message(message.chat.id, 'К сожалению, я не смог найти отели')
     else:
-        bot.send_message(message.chat.id, "Подождите, идёт загрузка", reply_markup=ReplyKeyboardRemove())
-        querystring = {"destinationId": TownCard.destination_id, "pageNumber": "1", "pageSize": answer,
-                       "checkIn": TownCard.from_date, "checkOut": TownCard.to_date, "adults1": "1",
-                       "sortOrder": parse.sort_hotels(UserCard.command), "locale": "en_US", "currency": "USD",
-                       "landmarkIds": "City center"}
-        if type(TownCard.max_price) == str and type(TownCard.min_price) == str:
-            if TownCard.min_price == '0':
-                querystring['priceMin'] = '1'
-            else:
-                querystring['priceMin'] = TownCard.min_price
-            querystring['priceMax'] = TownCard.max_price
-
-        try:
-            TownCard.hotel_list = parse.request_to_api(url=config.RAPID_URL + config.SECOND_ENDPOINTS,
-                                                       headers=config.HEADERS,
-                                                       params=querystring)["data"]["body"]["searchResults"]["results"]
-            if parse.sort_hotels(UserCard.command) == config.LIST_SORT[2]:
-                TownCard.hotel_list = parse.check_centre(TownCard.hotel_list)
-            if len(TownCard.hotel_list) == 0:
-                raise KeyError
-            TownCard.hotel_number = 0
-            days = TownCard.to_date - TownCard.from_date
-            hotel, price, text = hotel_info.get_info_about_hotel(TownCard.hotel_list[TownCard.hotel_number], days)
-            if TownCard.foto == 0:
-                markup = inline.inline_hotel_without_foto()
-                bot.send_message(message.chat.id, 'Выберите отель')
-                bot.send_message(message.chat.id, text, reply_markup=markup)
-
-            else:
-                TownCard.foto_list = parse.request_to_api(config.RAPID_URL + config.THIRD_ENDPOINTS,
-                                                          headers=config.HEADERS,
-                                                          params={"id": hotel['id']})["hotelImages"][:TownCard.foto]
-                TownCard.foto_number = 0
-                markup = inline.inline_button_hotel_with_foto()
-                foto = TownCard.foto_list[TownCard.foto_number]["baseUrl"].format(
-                    size=TownCard.foto_list[TownCard.foto_number]["sizes"][0]["suffix"]
-                )
-                bot.send_message(message.chat.id, 'Выберите отель')
-                bot.send_photo(message.chat.id, foto, caption=text, reply_markup=markup)
-        except KeyError:
-            bot.send_message(message.chat.id, 'К сожалению, я не смог найти отели')
+        ask = bot.send_message(message.chat.id, "Количество отелей должно быть числом от 1 до 25")
+        bot.register_next_step_handler(ask, find_hotels)
 
 
 @bot.callback_query_handler(func=lambda call: call.data.startswith("click"))
 def inline_keyboard_answer(call: CallbackQuery):
     """
     Выводит отели.
-    :param call: сообщение из бота
+    :param call: Сообщение из бота
     """
     days = TownCard.to_date - TownCard.from_date
     if call.data.startswith("clickwf"):
@@ -351,7 +390,7 @@ def inline_keyboard_answer(call: CallbackQuery):
 def saving_history(call: CallbackQuery):
     """
     Сохраняет в базу данных команду и отели.
-    :param call: сообщение из бота
+    :param call: Сообщение из бота
     """
     new_command_id = db.add_commands(UserCard.id, UserCard.command, UserCard.date_and_time, TownCard.town)
     days = TownCard.to_date - TownCard.from_date

@@ -5,7 +5,7 @@ from states import TownCard
 
 def inline_button_hotels(add_button_hotel):
     """
-    Добавляет в inline клавиатуру кнопки для пролистования отелей
+    Добавляет в inline клавиатуру кнопки для перелистывания отелей
     :param add_button_hotel: inline клавиатуру
     :return: inline клавиатуру
     """
@@ -25,13 +25,13 @@ def inline_button_hotels(add_button_hotel):
                                  callback_data="null"),
             InlineKeyboardButton(f"{TownCard.hotel_number + 1} из {len(TownCard.hotel_list)} отелей",
                                  callback_data="null"),
-            InlineKeyboardButton("Следующий️",
+            InlineKeyboardButton("Следующий",
                                  callback_data=f"clickh: {TownCard.hotel_number + 1}"),
         )
 
     elif TownCard.hotel_number == len(TownCard.hotel_list) - 1:
         add_button_hotel.add(
-            InlineKeyboardButton("Предыдущий️",
+            InlineKeyboardButton("Предыдущий",
                                  callback_data=f"clickh: {TownCard.hotel_number - 1}"),
             InlineKeyboardButton(f"{TownCard.hotel_number + 1} из {len(TownCard.hotel_list)} отелей",
                                  callback_data="null"),

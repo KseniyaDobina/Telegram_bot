@@ -24,13 +24,13 @@ def inline_hotel_without_foto():
                                  callback_data="null"),
             InlineKeyboardButton(f"{TownCard.hotel_number + 1} из {len(TownCard.hotel_list)} отелей",
                                  callback_data="null"),
-            InlineKeyboardButton("Следующий️",
+            InlineKeyboardButton("Следующий",
                                  callback_data=f"clickwf: {TownCard.hotel_number + 1}"),
         )
 
     elif TownCard.hotel_number == len(TownCard.hotel_list) - 1:
         inline_keyboard = InlineKeyboardMarkup().add(
-            InlineKeyboardButton("Предыдущий️",
+            InlineKeyboardButton("Предыдущий",
                                  callback_data=f"clickwf: {TownCard.hotel_number - 1}"),
             InlineKeyboardButton(f"{TownCard.hotel_number + 1} из {len(TownCard.hotel_list)} отелей",
                                  callback_data="null"),

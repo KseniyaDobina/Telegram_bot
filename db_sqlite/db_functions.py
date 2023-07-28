@@ -1,21 +1,4 @@
-import sqlite3 as sq
-from .base import db
 from .models import User, CommandHistory, Hotel
-
-
-def create_tables():
-    """
-    Создает три таблицы: users, commands_history, hotels.
-    """
-
-    tables = [User, CommandHistory, Hotel]
-    if not all(table.table_exists() for table in tables):
-        db.create_tables(tables)  # создаем таблицы
-        print('Таблицы созданы успешно.')
-        # logger.debug('Таблицы созданы успешно.')
-    else:
-        print('Таблицы уже существуют.')
-        # logger.debug('Таблицы уже существуют.')
 
 
 def check_user(id_user):

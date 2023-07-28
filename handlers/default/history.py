@@ -14,17 +14,19 @@ def bot_start(message: Message):
     """
     UserCard.id = db_functions.check_user(message.from_user.id)
     history = db_functions.list_commands(UserCard.id)
+    nn = '\n\n'
+    tt = '\t\t\t\t'
     if history:
         history_text = '*История запросов:*'
         for command_id in history:
             command = CommandHistory.get(id=command_id)
-            history_text += f"\n\n*Команда: /{command.command}\nДата и время ввода команды: {command.date}*" \
+            history_text += f"{nn}*Команда: /{command.command}\nДата и время ввода команды: {command.date}*" \
                             f"\nГород, в котором производился поиск: {command.town}"
 
             for id_hotel in Hotel.filter(command=command_id):
                 hotel = Hotel.get(id=id_hotel)
-                history_text += f"\n\n\t\t\t\t{hotel.id}) Название отеля: {hotel.name}" \
-                                f"\n\t\t\t\tСсылка на отель: {hotel.link}"
+                history_text += f"{nn}{tt}{hotel.id}) Название отеля: {hotel.name}" \
+                                f"\n{tt}Ссылка на отель: {hotel.link}"
 
         bot.send_message(message.chat.id, history_text, parse_mode='Markdown')
 

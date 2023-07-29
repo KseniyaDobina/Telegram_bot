@@ -18,6 +18,8 @@ def request_to_api(url, headers, params, post=False):
         if post:
             headers_for_post = headers
             headers_for_post['content-type'] = 'application/json'
+            # print(url)
+            # print(params)
             response = requests.post(url, json=params, headers=headers_for_post, timeout=40)
         else:
             response = requests.get(url, headers=headers, params=params, timeout=40)
@@ -26,11 +28,11 @@ def request_to_api(url, headers, params, post=False):
             return json.loads(response.text)
         else:
             print(response.status_code)
-            return response.status_code
+            return Exception
 
     except Exception:
         print("Что-то пошло не так")
-        return "Что-то пошло не так"
+        # return "Что-то пошло не так"
 
 
 def sort_hotels(command):

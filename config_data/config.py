@@ -16,7 +16,7 @@ HEADERS = {
 }
 FIRST_ENDPOINTS = '/locations/v3/search'
 SECOND_ENDPOINTS = '/properties/v2/list'
-THIRD_ENDPOINTS = '/properties/get-hotel-photos'
+THIRD_ENDPOINTS = '/properties/v2/detail'
 LIST_SORT = ('PRICE_LOW_TO_HIGH', 'PRICE_HIGH_TO_LOW', 'DISTANCE')
 DEFAULT_COMMANDS = [
     ('start', 'Запустить бота'),

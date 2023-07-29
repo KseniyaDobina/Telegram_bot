@@ -90,7 +90,7 @@ def find_neighborhood(message: Message):
 
 
 @bot.callback_query_handler(func=lambda call: call.data in TownCard.list_key.keys())
-def find_destination_id(call):
+def find_destination_id(call: CallbackQuery):
     """
     Сохраняет выбранный район.
     :param call: Сообщение из бота
@@ -112,7 +112,7 @@ def find_destination_id(call):
                          reply_markup=calendar)
 
 
-def min_price(message):
+def min_price(message: Message):
     """
     Сохраняет минимальную стоимость.
     :param message: Сообщение из бота
@@ -132,7 +132,7 @@ def min_price(message):
         bot.register_next_step_handler(ask, max_price)
 
 
-def max_price(message):
+def max_price(message: Message):
     """
     Сохраняет максимальную стоимость.
     :param message: Сообщение из бота
@@ -148,7 +148,7 @@ def max_price(message):
         bot.register_next_step_handler(ask, max_landmark)
 
 
-def max_landmark(message):
+def max_landmark(message: Message):
     """
     Сохраняет максимальное расстояние до центра.
     :param message: Сообщение из бота
@@ -168,7 +168,7 @@ def max_landmark(message):
 
 
 @bot.callback_query_handler(func=DetailedTelegramCalendar.func())
-def callback_calendar(callback):
+def callback_calendar(callback: CallbackQuery):
     """
     Сохраняет дату въезда и выезда.
     :param callback: Сообщение из бота
@@ -347,6 +347,8 @@ def find_hotels(message: Message):
                     bot.send_message(message.chat.id, 'Выберите отель')
                     bot.send_photo(message.chat.id, foto, caption=text, reply_markup=markup)
             except KeyError:
+                bot.send_message(message.chat.id, 'К сожалению, я не смог найти отели')
+            except TypeError:
                 bot.send_message(message.chat.id, 'К сожалению, я не смог найти отели')
     else:
         ask = bot.send_message(message.chat.id, "Количество отелей должно быть числом от 1 до 25")

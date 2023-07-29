@@ -1,18 +1,6 @@
-def check_address(check_hotel):
-    """
-    Проверяет наличие у отеля адреса.
-    :param check_hotel: Проверяемый отель
-    :return: Если адрес присутствует, то возвращается строка с адресом,
-    если нет, то возвращается строка с координатами отеля.
-    """
-    try:
-        address = check_hotel['address']['streetAddress']
-        return f"\nАдрес: {address}"
+from config_data.config import RAPID_URL, THIRD_ENDPOINTS, HEADERS
 
-    except KeyError:
-        return f"\nЯ не смог найти адрес, но я могу вывести координаты отеля:" \
-               f"\n\tШирина: {check_hotel['coordinate']['lat']}" \
-               f"\n\tДолгота: {check_hotel['coordinate']['lon']}"
+from config_data.parse import request_to_api
 
 
 def check_price(check_hotel, days):
@@ -53,17 +41,27 @@ def check_center(check_hotel):
         return '\nУ отеля не указано расстояние до центра города (отель может находиться уже в центре города)'
 
 
-def get_info_about_hotel(hotel, days):
+def get_info_about_hotel(hotel, days, foto=False):
     """
     Собираем и выводит полное описание отеля
     :param hotel: отель
     :param days: дни
     :return: описание отеля
     """
+    payload = {
+        "currency": "USD",
+        "eapid": 1,
+        "locale": "ru_RU",
+        "siteId": 300000001,
+        "propertyId": str(hotel['id'])
+    }
+    answer = request_to_api(url=RAPID_URL + THIRD_ENDPOINTS, headers=HEADERS, params=payload, post=True)
+
+    hotel_detail = answer['data']['propertyInfo']['summary']
     price = check_price(hotel, days)
-    #        f"{check_address(hotel)}" \
     text = f"Название отеля: {hotel['name']}" \
            f"{check_center(hotel)}" \
+           f"\nАдрес: {hotel_detail['location']['address']['addressLine']}" \
            f"{price[0]}" \
            f"\nСсылка на отель: hotels.com/h{hotel['id']}.Hotel-Information"
     return hotel, price[1], text

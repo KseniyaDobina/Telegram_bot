@@ -1,4 +1,5 @@
 import datetime
+import json
 
 from telebot.types import Message, ReplyKeyboardMarkup, ReplyKeyboardRemove, InlineKeyboardMarkup, \
     InlineKeyboardButton, InputMediaPhoto, CallbackQuery
@@ -6,7 +7,7 @@ from telegram_bot_calendar import DetailedTelegramCalendar
 
 from db_sqlite.models import Hotel
 from loader import bot
-from states import TownCard, UserCard
+from states import TownCard, UserCard, HotelCard
 from config_data import config, parse, hotel_info
 from keyboard import inline
 from db_sqlite import db_functions
@@ -65,7 +66,6 @@ def find_neighborhood(message: Message):
     neighborhood = {}
     try:
         if len(data['sr']) == 0:
-            print(data)
             raise KeyError
 
         for region in data['sr']:
@@ -81,6 +81,8 @@ def find_neighborhood(message: Message):
         bot.send_message(message.from_user.id, 'Уточните, пожалуйста:', reply_markup=destinations)
 
     except KeyError:
+        with open('tests/errors_list_town.json', 'w') as f:
+            json.dump(data, f)
         ask = bot.send_message(message.chat.id, 'Я не могу найти отели в этом городе, пожалуйста введите другой.')
         bot.register_next_step_handler(ask, find_neighborhood)
     except TypeError:
@@ -244,15 +246,15 @@ def number_of_foto(message: Message):
             bot.register_next_step_handler(ask, number_of_foto)
 
         elif answer > 5:
-            TownCard.foto = answer
             ask = bot.send_message(message.chat.id, "Я могу вывести максимум пять фото, пожалуйста введите число"
                                                     " меньше")
             bot.register_next_step_handler(ask, number_of_foto)
 
         else:
             TownCard.foto = answer
-            ask = bot.send_message(message.chat.id, "Сколько Вы хотите видеть отелей (максимум 25)")
+            ask = bot.send_message(message.chat.id, "Сколько Вы хотите видеть отелей (максимум 25)?")
             bot.register_next_step_handler(ask, find_hotels)
+
     else:
         ask = bot.send_message(message.chat.id, "Количество фото должно быть числом от 1 до 5.")
         bot.register_next_step_handler(ask, number_of_foto)
@@ -310,6 +312,7 @@ def find_hotels(message: Message):
                 if TownCard.min_price == '0':
                     print(314)
                     # querystring['priceMin'] = '1'
+
                 else:
                     print(317)
                     # querystring['priceMin'] = TownCard.min_price
@@ -321,7 +324,6 @@ def find_hotels(message: Message):
                                               headers=config.HEADERS,
                                               params=payload,
                                               post=True)
-                # print(answer)
                 TownCard.hotel_list = answer["data"]["propertySearch"]["properties"]
                 if parse.sort_hotels(UserCard.command) == config.LIST_SORT[2]:
                     TownCard.hotel_list = parse.check_centre(TownCard.hotel_list)
@@ -329,27 +331,34 @@ def find_hotels(message: Message):
                     raise KeyError
                 TownCard.hotel_number = 0
                 days = TownCard.to_date - TownCard.from_date
-                hotel, price, text = hotel_info.get_info_about_hotel(TownCard.hotel_list[TownCard.hotel_number], days)
-                if TownCard.foto == 0:
+                payload = config.PAYLOAD_HOTEL_DETAIL
+                payload['propertyId'] = str(TownCard.hotel_list[0]['id'])
+                answer = parse.request_to_api(url=config.RAPID_URL + config.THIRD_ENDPOINTS, headers=config.HEADERS,
+                                              params=payload, post=True)
+                price, text = hotel_info.get_info_about_hotel(TownCard.hotel_list[0],
+                                                              answer['data']['propertyInfo']['summary'],
+                                                              days)
+                HotelCard.hotel_text = text
+                if not TownCard.foto:
                     markup = inline.inline_hotel_without_foto()
                     bot.send_message(message.chat.id, 'Выберите отель')
                     bot.send_message(message.chat.id, text, reply_markup=markup)
 
                 else:
-                    TownCard.foto_list = parse.request_to_api(config.RAPID_URL + config.THIRD_ENDPOINTS,
-                                                              headers=config.HEADERS,
-                                                              params={"id": hotel['id']})["hotelImages"][:TownCard.foto]
                     TownCard.foto_number = 0
                     markup = inline.inline_button_hotel_with_foto()
-                    foto = TownCard.foto_list[TownCard.foto_number]["baseUrl"].format(
-                        size=TownCard.foto_list[TownCard.foto_number]["sizes"][0]["suffix"]
-                    )
+                    TownCard.foto_list = hotel_info.get_foto(
+                        answer['data']['propertyInfo']['propertyGallery']['images'],
+                        TownCard.foto)
                     bot.send_message(message.chat.id, 'Выберите отель')
-                    bot.send_photo(message.chat.id, foto, caption=text, reply_markup=markup)
+                    bot.send_photo(message.chat.id, TownCard.foto_list[0], caption=text, reply_markup=markup)
             except KeyError:
+                # with open('tests/errors.json', 'w') as f:
+                #     json.dump(answer, f)
                 bot.send_message(message.chat.id, 'К сожалению, я не смог найти отели')
             except TypeError:
-                bot.send_message(message.chat.id, 'К сожалению, я не смог найти отели')
+                bot.send_message(message.chat.id, 'К сожалению, возникли ошибки на сервисе. Попробуйте ещё раз')
+
     else:
         ask = bot.send_message(message.chat.id, "Количество отелей должно быть числом от 1 до 25")
         bot.register_next_step_handler(ask, find_hotels)
@@ -364,28 +373,40 @@ def inline_keyboard_answer(call: CallbackQuery):
     days = TownCard.to_date - TownCard.from_date
     if call.data.startswith("clickwf"):
         TownCard.hotel_number = int(call.data.split()[1])
-        hotel, price, text = hotel_info.get_info_about_hotel(TownCard.hotel_list[TownCard.hotel_number], days)
+        payload = config.PAYLOAD_HOTEL_DETAIL
+        payload['propertyId'] = str(TownCard.hotel_list[TownCard.hotel_number]['id'])
+        answer = parse.request_to_api(url=config.RAPID_URL + config.THIRD_ENDPOINTS, headers=config.HEADERS,
+                                      params=payload, post=True)
+        price, text = hotel_info.get_info_about_hotel(TownCard.hotel_list[0],
+                                                      answer['data']['propertyInfo']['summary'],
+                                                      days)
+        HotelCard.hotel_text = text
         markup = inline.inline_hotel_without_foto()
-        bot.edit_message_text(text, call.message.chat.id, call.message.message_id, reply_markup=markup)
+        bot.edit_message_text(HotelCard.hotel_text, call.message.chat.id, call.message.message_id, reply_markup=markup)
 
     else:
         if call.data.startswith("clickh"):
             TownCard.hotel_number = int(call.data.split()[1])
-            hotel, price, text = hotel_info.get_info_about_hotel(TownCard.hotel_list[TownCard.hotel_number], days)
-            TownCard.foto_list = parse.request_to_api(config.RAPID_URL + config.THIRD_ENDPOINTS,
-                                                      headers=config.HEADERS,
-                                                      params={"id": hotel['id']})["hotelImages"][:TownCard.foto]
+            payload = config.PAYLOAD_HOTEL_DETAIL
+            payload['propertyId'] = str(TownCard.hotel_list[TownCard.hotel_number]['id'])
+            answer = parse.request_to_api(url=config.RAPID_URL + config.THIRD_ENDPOINTS, headers=config.HEADERS,
+                                          params=payload, post=True)
+            price, text = hotel_info.get_info_about_hotel(
+                TownCard.hotel_list[TownCard.hotel_number],
+                answer['data']['propertyInfo']['summary'],
+                days)
+            HotelCard.hotel_text = text
+            TownCard.foto_list = hotel_info.get_foto(
+                answer['data']['propertyInfo']['propertyGallery']['images'],
+                TownCard.foto)
             TownCard.foto_number = 0
 
         elif call.data.startswith("clickf"):
-            hotel, price, text = hotel_info.get_info_about_hotel(TownCard.hotel_list[TownCard.hotel_number], days)
             TownCard.foto_number = int(call.data.split()[1])
 
         markup = inline.inline_button_hotel_with_foto()
-        media = InputMediaPhoto(TownCard.foto_list[TownCard.foto_number]["baseUrl"].format(
-            size=TownCard.foto_list[TownCard.foto_number]["sizes"][0]["suffix"]
-        ),
-            caption=text)
+        media = InputMediaPhoto(TownCard.foto_list[TownCard.foto_number],
+                                caption=HotelCard.hotel_text)
         bot.edit_message_media(media, call.message.chat.id, call.message.message_id, reply_markup=markup)
 
 
@@ -397,25 +418,17 @@ def saving_history(call: CallbackQuery):
     """
     new_command_id = db_functions.add_commands(UserCard.id, UserCard.command, TownCard.town)
     days = TownCard.to_date - TownCard.from_date
-    hotel, price, text = hotel_info.get_info_about_hotel(TownCard.hotel_list[TownCard.hotel_number], days)
+    # price, text = hotel_info.get_info_about_hotel(TownCard.hotel_list[TownCard.hotel_number], days)
     bot.delete_message(call.message.chat.id, call.message.message_id)
     bot.send_message(call.message.chat.id, f"Последний просмотренный отель:")
     if TownCard.foto != 0:
-        all_foto = [
-            InputMediaPhoto(TownCard.foto_list[0]["baseUrl"].format(
-                size=TownCard.foto_list[0]["sizes"][0]["suffix"]
-            ), caption=text)
-        ]
-
+        all_foto = [InputMediaPhoto(TownCard.foto_list[0], caption=HotelCard.hotel_text)]
         for id_foto in range(1, len(TownCard.foto_list)):
-            all_foto.append(InputMediaPhoto(TownCard.foto_list[id_foto]["baseUrl"].format(
-                size=TownCard.foto_list[id_foto]["sizes"][0]["suffix"]
-            )))
-
+            all_foto.append(InputMediaPhoto(TownCard.foto_list[id_foto]))
         bot.send_media_group(call.message.chat.id, all_foto)
 
     else:
-        bot.send_message(call.message.chat.id, text)
+        bot.send_message(call.message.chat.id, HotelCard.hotel_text)
     for hotel_count in TownCard.hotel_list:
         Hotel.create(command=new_command_id, name=hotel_count['name'],
                      link=f"hotels.com/h{hotel_count['id']}.Hotel-Information")

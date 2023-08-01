@@ -41,27 +41,25 @@ def check_center(check_hotel):
         return '\nУ отеля не указано расстояние до центра города (отель может находиться уже в центре города)'
 
 
-def get_info_about_hotel(hotel, days, foto=False):
+def get_foto(list_foto, count):
     """
-    Собираем и выводит полное описание отеля
+
+    """
+    new_list_foto = [list_foto[cnt]['image']['url'] for cnt in range(count)]
+    return new_list_foto
+
+
+def get_info_about_hotel(hotel_list, hotel, days):
+    """
+    Собирает и выводит полное описание отеля
     :param hotel: отель
     :param days: дни
     :return: описание отеля
     """
-    payload = {
-        "currency": "USD",
-        "eapid": 1,
-        "locale": "ru_RU",
-        "siteId": 300000001,
-        "propertyId": str(hotel['id'])
-    }
-    answer = request_to_api(url=RAPID_URL + THIRD_ENDPOINTS, headers=HEADERS, params=payload, post=True)
-
-    hotel_detail = answer['data']['propertyInfo']['summary']
-    price = check_price(hotel, days)
+    price = check_price(hotel_list, days)
     text = f"Название отеля: {hotel['name']}" \
-           f"{check_center(hotel)}" \
-           f"\nАдрес: {hotel_detail['location']['address']['addressLine']}" \
+           f"{check_center(hotel_list)}" \
+           f"\nАдрес: {hotel['location']['address']['addressLine']}" \
            f"{price[0]}" \
            f"\nСсылка на отель: hotels.com/h{hotel['id']}.Hotel-Information"
-    return hotel, price[1], text
+    return price[1], text

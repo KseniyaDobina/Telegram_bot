@@ -1,1 +1,1 @@
-from .states import TownCard, UserCard
+from .states import TownCard, UserCard, HotelCard

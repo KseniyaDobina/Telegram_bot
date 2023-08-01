@@ -6,4 +6,4 @@ from db_sqlite import models
 if __name__ == '__main__':
     models.create_tables()
     set_default_commands(bot)
-    bot.infinity_polling()
+    bot.infinity_polling(timeout=10, long_polling_timeout=5)

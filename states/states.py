@@ -38,6 +38,13 @@ class TownCard(StatesGroup):
     foto_list = State()
 
 
+class HotelCard(StatesGroup):
+
+    hotel_text = State()
+    price = State()
+    # foto_list = State()
+
+
 class UserCard(StatesGroup):
     """
     Класс Пользователя

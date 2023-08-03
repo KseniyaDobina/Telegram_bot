@@ -337,8 +337,8 @@ def find_hotels(message: Message):
                     bot.send_message(message.chat.id, 'Выберите отель')
                     bot.send_photo(message.chat.id, TownCard.foto_list[0], caption=text, reply_markup=markup)
             except KeyError:
-                with open('tests/errors.json', 'w') as f:
-                    json.dump(answer, f)
+                # with open('tests/errors.json', 'w') as f:
+                #     json.dump(answer, f)
                 bot.send_message(message.chat.id, 'К сожалению, я не смог найти отели')
             except TypeError:
                 bot.send_message(message.chat.id, 'К сожалению, возникли ошибки на сервисе. Попробуйте ещё раз')

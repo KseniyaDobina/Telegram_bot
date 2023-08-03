@@ -9,9 +9,9 @@ from loader import bot
 def bot_echo(message: Message):
     """
         Отправляет сообщение пользователю.
-        :param message: сообщение из бота
+        :param message: Сообщение из бота
         """
-    if message.text.lower() == 'привет':
+    if message.text.lower().strip() == 'привет':
         bot.send_message(message.chat.id, f"Привет, {message.from_user.full_name}."
                                           f"\nЧтобы использовать бота, вам нужно выбрать команду."
                                           f"\nВоспользуйтесь /help, чтобы посмотреть список команд.")

@@ -69,7 +69,8 @@ def find_neighborhood(message: Message):
             raise KeyError
         for region in data['sr']:
             if not region['regionNames']['shortName'] in neighborhood.values():
-                neighborhood[region['gaiaId']] = region['regionNames']['shortName']
+                if region.get('gaiaId'):
+                    neighborhood[region['gaiaId']] = region['regionNames']['shortName']
         TownCard.list_key = neighborhood
         destinations = InlineKeyboardMarkup()
         for id_city in neighborhood.keys():
@@ -98,10 +99,10 @@ def find_destination_id(call: CallbackQuery):
                           call.message.chat.id,
                           call.message.message_id)
     if parse.sort_hotels(UserCard.command) == 'DISTANCE':
-        ask = bot.send_message(call.message.chat.id, 'Введите минимальную стоимость в сутки')
+        ask = bot.send_message(call.message.chat.id, 'Введите минимальную стоимость в сутки.')
         bot.register_next_step_handler(ask, min_price)
     else:
-        bot.send_message(call.message.chat.id, 'Выберите дату, когда Вы въедете в отель')
+        bot.send_message(call.message.chat.id, 'Выберите дату, когда Вы въедете в отель.')
         TownCard.min_date = datetime.date.today()
         calendar, step = DetailedTelegramCalendar(locale='ru', min_date=TownCard.min_date).build()
         bot.send_message(call.message.chat.id,
@@ -155,8 +156,7 @@ def max_landmark(message: Message):
     answer = message.text
     if answer.isdigit():
         if float(answer) < 0:
-            ask = bot.send_message(message.chat.id, 'Максимальное расстояние не может быть отрицательным.'
-                                                    ' Пожалуйста введите максимальное расстояние ещё раз')
+            ask = bot.send_message(message.chat.id, 'Максимальное расстояние не может быть отрицательным.')
             bot.register_next_step_handler(ask, max_landmark)
         else:
             TownCard.max_landmark = float(answer)
@@ -212,12 +212,12 @@ def check_foto(message: Message):
     answer = message.text
     if answer == "Да ✅":
         TownCard.foto = 5
-        ask = bot.send_message(message.chat.id, "Сколько Вы хотите фото отеля (максимум 5)",
+        ask = bot.send_message(message.chat.id, "Сколько Вы хотите фото отеля (максимум 5)?",
                                reply_markup=ReplyKeyboardRemove())
         bot.register_next_step_handler(ask, number_of_foto)
     elif answer == 'Нет ❌':
         TownCard.foto = 0
-        ask = bot.send_message(message.chat.id, "Сколько Вы хотите видеть отелей (максимум 25)",
+        ask = bot.send_message(message.chat.id, "Сколько Вы хотите видеть отелей (максимум 25)?",
                                reply_markup=ReplyKeyboardRemove())
         bot.register_next_step_handler(ask, find_hotels)
     else:
@@ -235,9 +235,8 @@ def number_of_foto(message: Message):
     if message.text.isdigit():
         answer = int(message.text)
         if answer < 1:
-            ask = bot.send_message(message.chat.id, "Вы ввели количество меньше 1,"
-                                                    " чтобы увидеть фотографии отеля,"
-                                                    " нужно ввести число больше или равное 1")
+            ask = bot.send_message(message.chat.id, "Количество отелей должно быть больше 0. "
+                                                    "Введите количество отелей ещё раз.")
             bot.register_next_step_handler(ask, number_of_foto)
         elif answer > 5:
             ask = bot.send_message(message.chat.id, "Я могу вывести максимум пять фото, пожалуйста введите число"
@@ -260,8 +259,8 @@ def find_hotels(message: Message):
     if message.text.isdigit():
         answer = message.text
         if int(answer) < 1:
-            ask = bot.send_message(message.chat.id, "Я не могу вывести меньше одного отеля,"
-                                                    " введите число больше или равное 1")
+            ask = bot.send_message(message.chat.id, "Я не могу вывести меньше одного отеля, введите число больше или "
+                                                    "равное 1.")
             bot.register_next_step_handler(ask, find_hotels)
         elif int(answer) > 25:
             TownCard.foto = answer

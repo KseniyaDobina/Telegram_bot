@@ -1,8 +1,7 @@
 import datetime
 from peewee import *
 
-db = SqliteDatabase('bot.db')
-db.connect()
+from .settings import db
 
 
 def create_tables():

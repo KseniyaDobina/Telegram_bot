@@ -56,13 +56,14 @@ def check_centre(list_hotels):
     :return: список с отелями
     """
     find_id = float("inf")
-    for id_c, count in enumerate(list_hotels):
-        if count['landmarks'][0]['label'] != "City center":
+    for id_hotel, hotel in enumerate(list_hotels):
+        try:
+            if hotel['destinationInfo']['distanceFromDestination']['value'] > TownCard.max_landmark:
+                find_id += 1
+                break
+        except KeyError:
             return []
-        elif float(count['landmarks'][0]['distance'].split()[0]) > TownCard.max_landmark:
-            find_id += 1
-            break
-        find_id = id_c
+        find_id = id_hotel
 
     if find_id < float("inf"):
         return list_hotels[:find_id]

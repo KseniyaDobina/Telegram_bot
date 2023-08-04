@@ -23,10 +23,15 @@ def bot_start(message: Message):
             history_text += f"{nn}*Команда: /{command.command}\nДата и время ввода команды: {command.date}*" \
                             f"\nГород, в котором производился поиск: {command.town}"
 
-            for id_hotel in Hotel.filter(command=command_id):
-                hotel = Hotel.get(id=id_hotel)
-                history_text += f"{nn}{tt}{hotel.id}) Название отеля: {hotel.name}" \
-                                f"\n{tt}Ссылка на отель: {hotel.link}"
+            # count = 0
+            #
+            # for id_hotel in Hotel.filter(command=command_id):
+            #     if count == 4:
+            #         break
+            #     hotel = Hotel.get(id=id_hotel)
+            #     history_text += f"{nn}{tt}{hotel.id}) Название отеля: {hotel.name}" \
+            #                     f"\n{tt}Ссылка на отель: {hotel.link}"
+            #     count += 1
 
         bot.send_message(message.chat.id, history_text, parse_mode='Markdown')
 

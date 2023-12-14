@@ -1,7 +1,7 @@
 from telebot.types import Message
 
 from db_sqlite import db_functions
-from db_sqlite.models import CommandHistory, Hotel
+from db_sqlite.models import Hotel
 from loader import bot
 from states import UserCard
 
@@ -13,25 +13,21 @@ def bot_start(message: Message):
     :param message: Сообщение из бота
     """
     UserCard.id = db_functions.check_user(message.from_user.id)
-    history = db_functions.list_commands(UserCard.id)
-    nn = '\n\n'
-    tt = '\t\t\t\t'
+    history = Hotel.select().where(Hotel.user == UserCard.id).exists()
+    # history = CommandHistory.select().where(CommandHistory.user == UserCard.id).exists()
+    n = '\n'
+    t = '\t' * 6
     if history:
         history_text = '*История запросов:*'
-        for command_id in history:
-            command = CommandHistory.get(id=command_id)
-            history_text += f"{nn}*Команда: /{command.command}\nДата и время ввода команды: {command.date}*" \
-                            f"\nГород, в котором производился поиск: {command.town}"
-
-            # count = 0
-            #
-            # for id_hotel in Hotel.filter(command=command_id):
-            #     if count == 4:
-            #         break
-            #     hotel = Hotel.get(id=id_hotel)
-            #     history_text += f"{nn}{tt}{hotel.id}) Название отеля: {hotel.name}" \
-            #                     f"\n{tt}Ссылка на отель: {hotel.link}"
-            #     count += 1
+        history = Hotel.filter(user=UserCard.id)
+        for number_hotel, hotel in enumerate(history):
+            history_text += f"{n * 2} {number_hotel + 1}) *Отель: {hotel.name}*" \
+                            f"{n}{t}Цена в сутки: " \
+                            f"*{hotel.price if hotel.price else 'Посмотрите актуальную цену на сайте отеля'}$*" \
+                            f"{n}{t}Дата и время ввода добавления: *{hotel.date}*" \
+                            f"{n}{t}Ссылка отеля: *{hotel.link}*" \
+                            f"{n}{t}Город, в котором производился поиск: *{hotel.town}*" \
+                            f"{n}{t}*Команда:* /{hotel.command}"
 
         bot.send_message(message.chat.id, history_text, parse_mode='Markdown')
 

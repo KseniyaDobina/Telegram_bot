@@ -9,7 +9,7 @@ def create_tables():
     Создает три таблицы: users, commands_history, hotels.
     """
 
-    tables = [User, CommandHistory, Hotel]
+    tables = [User, Hotel]
     if not all(table.table_exists() for table in tables):
         db.create_tables(tables)  # создаем таблицы
         print('Таблицы созданы успешно.')
@@ -31,20 +31,15 @@ class User(BaseModel):
         table_name = 'users'
 
 
-class CommandHistory(BaseModel):
+class Hotel(BaseModel):
     user = ForeignKeyField(User)
     command = CharField()
     date = DateField(default=datetime.datetime.now().strftime("%Y-%m-%d %H:%M"))
     town = CharField()
-
-    class Meta:
-        table_name = 'commands_history'
-
-
-class Hotel(BaseModel):
-    command = ForeignKeyField(CommandHistory)
     name = CharField()
     link = CharField()
+    price = IntegerField()
+    favorite = BooleanField(default=False)
 
     class Meta:
         table_name = 'hotels'

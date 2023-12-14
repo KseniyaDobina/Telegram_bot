@@ -77,8 +77,6 @@ def find_neighborhood(message: Message):
             destinations.add(InlineKeyboardButton(text=neighborhood[id_city], callback_data=id_city))
         bot.send_message(message.from_user.id, 'Уточните, пожалуйста:', reply_markup=destinations)
     except KeyError:
-        with open('tests/errors_list_town.json', 'w') as f:
-            json.dump(data, f)
         ask = bot.send_message(message.chat.id, 'Я не могу найти отели в этом городе, пожалуйста введите другой.')
         bot.register_next_step_handler(ask, find_neighborhood)
     except TypeError:
@@ -144,7 +142,7 @@ def max_price(message: Message):
             ask = bot.send_message(message.chat.id, 'Введите максимальное расстояние до центра')
             bot.register_next_step_handler(ask, max_landmark)
     else:
-        ask = bot.send_message(message.chat.id, 'Максимальная цена должна быть числом.')
+        ask = bot.send_message(message.chat.id, 'Максимальная цена должна быть числом')
         bot.register_next_step_handler(ask, max_price)
 
 
@@ -156,7 +154,7 @@ def max_landmark(message: Message):
     answer = message.text
     if answer.isdigit():
         if float(answer) < 0:
-            ask = bot.send_message(message.chat.id, 'Максимальное расстояние не может быть отрицательным.')
+            ask = bot.send_message(message.chat.id, 'Максимальное расстояние не может быть отрицательным')
             bot.register_next_step_handler(ask, max_landmark)
         else:
             TownCard.max_landmark = float(answer)
@@ -164,7 +162,7 @@ def max_landmark(message: Message):
             calendar, step = DetailedTelegramCalendar(locale='ru', min_date=TownCard.min_date).build()
             bot.send_message(message.chat.id, 'Выберите год', reply_markup=calendar)
     else:
-        ask = bot.send_message(message.chat.id, 'Максимальное расстояние должно быть числом.')
+        ask = bot.send_message(message.chat.id, 'Максимальное расстояние должно быть числом')
         bot.register_next_step_handler(ask, max_landmark)
 
 
@@ -236,7 +234,7 @@ def number_of_foto(message: Message):
         answer = int(message.text)
         if answer < 1:
             ask = bot.send_message(message.chat.id, "Количество отелей должно быть больше 0. "
-                                                    "Введите количество отелей ещё раз.")
+                                                    "Введите количество отелей ещё раз")
             bot.register_next_step_handler(ask, number_of_foto)
         elif answer > 5:
             ask = bot.send_message(message.chat.id, "Я могу вывести максимум пять фото, пожалуйста введите число"
@@ -247,7 +245,7 @@ def number_of_foto(message: Message):
             ask = bot.send_message(message.chat.id, "Сколько Вы хотите видеть отелей (максимум 25)?")
             bot.register_next_step_handler(ask, find_hotels)
     else:
-        ask = bot.send_message(message.chat.id, "Количество фото должно быть числом от 1 до 5.")
+        ask = bot.send_message(message.chat.id, "Количество фото должно быть числом от 1 до 5")
         bot.register_next_step_handler(ask, number_of_foto)
 
 
@@ -260,7 +258,7 @@ def find_hotels(message: Message):
         answer = message.text
         if int(answer) < 1:
             ask = bot.send_message(message.chat.id, "Я не могу вывести меньше одного отеля, введите число больше или "
-                                                    "равное 1.")
+                                                    "равное 1")
             bot.register_next_step_handler(ask, find_hotels)
         elif int(answer) > 25:
             TownCard.foto = answer
@@ -297,7 +295,7 @@ def find_hotels(message: Message):
                 #     "min": 100
                 # }}
             }
-            if type(TownCard.max_price) == int and type(TownCard.min_price) == int:
+            if isinstance(TownCard.max_price, int) and isinstance(TownCard.min_price, int):
                 if TownCard.min_price == 0:
                     TownCard.min_price = 1
                 payload["filters"] = {"price": {"min": TownCard.min_price, "max": TownCard.max_price},
@@ -396,7 +394,6 @@ def saving_history(call: CallbackQuery):
     Сохраняет в базу данных команду и отели.
     :param call: Сообщение из бота
     """
-    new_command_id = db_functions.add_commands(UserCard.id, UserCard.command, TownCard.town)
     days = TownCard.to_date - TownCard.from_date
     bot.delete_message(call.message.chat.id, call.message.message_id)
     bot.send_message(call.message.chat.id, f"Последний просмотренный отель:")
@@ -408,5 +405,7 @@ def saving_history(call: CallbackQuery):
     else:
         bot.send_message(call.message.chat.id, HotelCard.hotel_text)
     for hotel_count in TownCard.hotel_list:
-        Hotel.create(command=new_command_id, name=hotel_count['name'],
-                     link=f"hotels.com/h{hotel_count['id']}.Hotel-Information")
+        price = hotel_info.check_price(hotel_count, days)
+        Hotel.create(user=UserCard.id, command=UserCard.command, town=TownCard.town, name=hotel_count['name'],
+                     price=price[1], link=f"hotels.com/h{hotel_count['id']}.Hotel-Information")
+    bot.send_message(call.message.chat.id, 'Отели сохранены в историю')

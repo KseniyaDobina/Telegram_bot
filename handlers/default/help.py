@@ -7,7 +7,7 @@ from config_data.config import DEFAULT_COMMANDS
 def bot_help(message: Message):
     """
     Отправляет список всех команд.
-    :param message: сообщение из бота
+    :param message: Сообщение из бота
     """
     list_fun = '\n'.join([f'/{command} - {desk}' for command, desk in DEFAULT_COMMANDS])
     text = f"Список всех команд:" \

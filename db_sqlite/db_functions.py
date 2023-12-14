@@ -1,4 +1,5 @@
-from .models import User, CommandHistory, Hotel
+# from .models import User, CommandHistory, Hotel
+from .models import User, Hotel
 
 
 def check_user(id_user):
@@ -14,29 +15,3 @@ def check_user(id_user):
     except User.DoesNotExist:
         user = User.create(id_telegram=id_user)
         return user.id
-
-
-def add_commands(user_id, command, town):
-    """
-    Добавляет новую команду и город, где производился поиск.
-    :param user_id: Id пользователя в базе данных
-    :param command: Название команды
-    :param town: Город
-    :return: id добавленной команды
-    """
-
-    new_command = CommandHistory.create(user=user_id, command=command, town=town)
-    return new_command.id
-
-
-def list_commands(user_id):
-    """
-    Находит и возвращает список команд, которые вводил пользователь
-    :param user_id: id пользователя
-    :return: список команд
-    """
-    try:
-        commands = CommandHistory.filter(user=user_id)
-        return commands
-    except CommandHistory.DoesNotExist:
-        return False

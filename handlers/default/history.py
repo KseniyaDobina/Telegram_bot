@@ -13,13 +13,12 @@ def bot_start(message: Message):
     :param message: Сообщение из бота
     """
     UserCard.id = db_functions.check_user(message.from_user.id)
-    history = Hotel.select().where(Hotel.user == UserCard.id).exists()
-    # history = CommandHistory.select().where(CommandHistory.user == UserCard.id).exists()
+    history = Hotel.select().where(Hotel.user == UserCard.id, Hotel.history == True).exists()
     n = '\n'
     t = '\t' * 6
     if history:
         history_text = '*История запросов:*'
-        history = Hotel.filter(user=UserCard.id)
+        history = Hotel.filter(user=UserCard.id, history=True)
         for number_hotel, hotel in enumerate(history):
             history_text += f"{n * 2} {number_hotel + 1}) *Отель: {hotel.name}*" \
                             f"{n}{t}Цена в сутки: " \

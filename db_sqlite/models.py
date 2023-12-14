@@ -40,6 +40,7 @@ class Hotel(BaseModel):
     link = CharField()
     price = IntegerField()
     favorite = BooleanField(default=False)
+    history = BooleanField(default=True)
 
     class Meta:
         table_name = 'hotels'

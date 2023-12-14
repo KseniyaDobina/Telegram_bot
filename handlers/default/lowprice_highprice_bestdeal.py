@@ -404,8 +404,18 @@ def saving_history(call: CallbackQuery):
         bot.send_media_group(call.message.chat.id, all_foto)
     else:
         bot.send_message(call.message.chat.id, HotelCard.hotel_text)
+    old_hotels = Hotel.select().where(Hotel.history == True, Hotel.user == UserCard.id).exists()
+    if old_hotels:
+        hotels = Hotel.filter(history=True, user=UserCard.id)
+        for hotel in hotels:
+            hotel.delete_instance()
     for hotel_count in TownCard.hotel_list:
         price = hotel_info.check_price(hotel_count, days)
-        Hotel.create(user=UserCard.id, command=UserCard.command, town=TownCard.town, name=hotel_count['name'],
-                     price=price[1], link=f"hotels.com/h{hotel_count['id']}.Hotel-Information")
+        hotel = Hotel.select().where(Hotel.favorite == True, Hotel.user == UserCard.id).exists()
+        if not hotel:
+            Hotel.create(user=UserCard.id, command=UserCard.command, town=TownCard.town, name=hotel_count['name'],
+                         price=price[1], link=f"hotels.com/h{hotel_count['id']}.Hotel-Information")
+        else:
+            hotel.history = True
+            hotel.save()
     bot.send_message(call.message.chat.id, 'Отели сохранены в историю')

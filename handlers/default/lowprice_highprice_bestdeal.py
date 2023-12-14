@@ -1,5 +1,4 @@
 import datetime
-import json
 
 from telebot.types import Message, ReplyKeyboardMarkup, ReplyKeyboardRemove, InlineKeyboardMarkup, \
     InlineKeyboardButton, InputMediaPhoto, CallbackQuery
@@ -14,7 +13,7 @@ from db_sqlite import db_functions
 
 
 @bot.message_handler(commands=['lowprice'])
-def first_question(message: Message):
+def command_lowprice(message: Message):
     """
     Добавляет id пользователя и дату.
     :param message: Сообщение из бота
@@ -27,7 +26,7 @@ def first_question(message: Message):
 
 
 @bot.message_handler(commands=['highprice'])
-def first_question(message: Message):
+def command_highprice(message: Message):
     """
     Добавляет id пользователя и дату.
     :param message: Сообщение из бота
@@ -40,7 +39,7 @@ def first_question(message: Message):
 
 
 @bot.message_handler(commands=['bestdeal'])
-def first_question(message: Message):
+def command_bestdeal(message: Message):
     """
     Добавляет id пользователя и дату.
     :param message: Сообщение из бота
@@ -50,6 +49,37 @@ def first_question(message: Message):
     UserCard.date_and_time = datetime.datetime.now()
     ask = bot.send_message(message.chat.id, 'В каком городе смотрим отели?')
     bot.register_next_step_handler(ask, find_neighborhood)
+
+
+@bot.message_handler(commands=['history'])
+def command_history(message: Message):
+    """
+    Отправляет историю поиска отелей.
+    :param message: Сообщение из бота
+    """
+    UserCard.id = db_functions.check_user(message.from_user.id)
+    history = Hotel.select().where(Hotel.user == UserCard.id, Hotel.history == True).exists()
+    n = '\n'
+    if history:
+        # history_text = '*История запросов:*'
+        history = Hotel.filter(user=UserCard.id, history=True)
+        TownCard.hotel_list = history
+        TownCard.list_key = dict()
+        TownCard.list_key[-1] = 0
+        TownCard.hotel_number = 0
+        text = f"*История запросов:*" \
+               f"{n * 2}*Отель: {history[0].name}*" \
+               f"{n}Цена в сутки: " \
+               f"*{history[0].price if history[0].price else 'Посмотрите актуальную цену на сайте отеля'}$*" \
+               f"{n}Дата и время ввода добавления: *{history[0].date}*" \
+               f"{n}Ссылка отеля: *{history[0].link}*" \
+               f"{n}Город, в котором производился поиск: *{history[0].town}*" \
+               f"{n}*Команда:* /{history[0].command}"
+        markup = inline.inline_hotel_without_foto()
+        # bot.send_message(message.chat.id, '*История запросов:*')
+        bot.send_message(message.chat.id, text, reply_markup=markup, parse_mode='Markdown')
+    else:
+        bot.send_message(message.chat.id, f"История пуста")
 
 
 def find_neighborhood(message: Message):
@@ -323,7 +353,7 @@ def find_hotels(message: Message):
                 HotelCard.hotel_text = text
                 if not TownCard.foto:
                     markup = inline.inline_hotel_without_foto()
-                    bot.send_message(message.chat.id, 'Выберите отель')
+                    bot.send_message(message.chat.id, 'Вывожу отели')
                     bot.send_message(message.chat.id, text, reply_markup=markup)
                 else:
                     TownCard.foto_number = 0
@@ -331,7 +361,7 @@ def find_hotels(message: Message):
                     TownCard.foto_list = hotel_info.get_foto(
                         answer['data']['propertyInfo']['propertyGallery']['images'],
                         TownCard.foto)
-                    bot.send_message(message.chat.id, 'Выберите отель')
+                    bot.send_message(message.chat.id, 'Вывожу отели')
                     bot.send_photo(message.chat.id, TownCard.foto_list[0], caption=text, reply_markup=markup)
             except KeyError:
                 # with open('tests/errors.json', 'w') as f:
@@ -350,42 +380,57 @@ def inline_keyboard_answer(call: CallbackQuery):
     Выводит отели.
     :param call: Сообщение из бота
     """
-    days = TownCard.to_date - TownCard.from_date
-    if call.data.startswith("clickwf"):
-        TownCard.hotel_number = int(call.data.split()[1])
-        payload = config.PAYLOAD_HOTEL_DETAIL
-        payload['propertyId'] = str(TownCard.hotel_list[TownCard.hotel_number]['id'])
-        answer = parse.request_to_api(url=config.RAPID_URL + config.THIRD_ENDPOINTS, headers=config.HEADERS,
-                                      params=payload, post=True)
-        price, text = hotel_info.get_info_about_hotel(TownCard.hotel_list[0],
-                                                      answer['data']['propertyInfo']['summary'],
-                                                      days)
-        HotelCard.hotel_text = text
-        markup = inline.inline_hotel_without_foto()
-        bot.edit_message_text(HotelCard.hotel_text, call.message.chat.id, call.message.message_id, reply_markup=markup)
-    else:
-        if call.data.startswith("clickh"):
+    if isinstance(TownCard.to_date, int):
+        days = TownCard.to_date - TownCard.from_date
+        if call.data.startswith("clickwf"):
             TownCard.hotel_number = int(call.data.split()[1])
             payload = config.PAYLOAD_HOTEL_DETAIL
             payload['propertyId'] = str(TownCard.hotel_list[TownCard.hotel_number]['id'])
             answer = parse.request_to_api(url=config.RAPID_URL + config.THIRD_ENDPOINTS, headers=config.HEADERS,
                                           params=payload, post=True)
-            price, text = hotel_info.get_info_about_hotel(
-                TownCard.hotel_list[TownCard.hotel_number],
-                answer['data']['propertyInfo']['summary'],
-                days)
+            price, text = hotel_info.get_info_about_hotel(TownCard.hotel_list[0],
+                                                          answer['data']['propertyInfo']['summary'],
+                                                          days)
             HotelCard.hotel_text = text
-            TownCard.foto_list = hotel_info.get_foto(
-                answer['data']['propertyInfo']['propertyGallery']['images'],
-                TownCard.foto)
-            TownCard.foto_number = 0
+            markup = inline.inline_hotel_without_foto()
+            bot.edit_message_text(HotelCard.hotel_text, call.message.chat.id, call.message.message_id, reply_markup=markup)
+        else:
+            if call.data.startswith("clickh"):
+                TownCard.hotel_number = int(call.data.split()[1])
+                payload = config.PAYLOAD_HOTEL_DETAIL
+                payload['propertyId'] = str(TownCard.hotel_list[TownCard.hotel_number]['id'])
+                answer = parse.request_to_api(url=config.RAPID_URL + config.THIRD_ENDPOINTS, headers=config.HEADERS,
+                                              params=payload, post=True)
+                price, text = hotel_info.get_info_about_hotel(
+                    TownCard.hotel_list[TownCard.hotel_number],
+                    answer['data']['propertyInfo']['summary'],
+                    days)
+                HotelCard.hotel_text = text
+                TownCard.foto_list = hotel_info.get_foto(
+                    answer['data']['propertyInfo']['propertyGallery']['images'],
+                    TownCard.foto)
+                TownCard.foto_number = 0
 
-        elif call.data.startswith("clickf"):
-            TownCard.foto_number = int(call.data.split()[1])
-        markup = inline.inline_button_hotel_with_foto()
-        media = InputMediaPhoto(TownCard.foto_list[TownCard.foto_number],
-                                caption=HotelCard.hotel_text)
-        bot.edit_message_media(media, call.message.chat.id, call.message.message_id, reply_markup=markup)
+            elif call.data.startswith("clickf"):
+                TownCard.foto_number = int(call.data.split()[1])
+            markup = inline.inline_button_hotel_with_foto()
+            media = InputMediaPhoto(TownCard.foto_list[TownCard.foto_number],
+                                    caption=HotelCard.hotel_text)
+            bot.edit_message_media(media, call.message.chat.id, call.message.message_id, reply_markup=markup)
+    else:
+        n = '\n'
+        TownCard.hotel_number = int(call.data.split()[1])
+        text = f"*История запросов:*" \
+               f"{n*2}*Отель: {TownCard.hotel_list[TownCard.hotel_number].name}*" \
+               f"{n}Цена в сутки: " \
+               f"*{TownCard.hotel_list[TownCard.hotel_number].price if TownCard.hotel_list[TownCard.hotel_number].price else 'Посмотрите актуальную цену на сайте отеля'}$*" \
+               f"{n}Дата и время ввода добавления: *{TownCard.hotel_list[TownCard.hotel_number].date}*" \
+               f"{n}Ссылка отеля: *{TownCard.hotel_list[TownCard.hotel_number].link}*" \
+               f"{n}Город, в котором производился поиск: *{TownCard.hotel_list[TownCard.hotel_number].town}*" \
+               f"{n}*Команда:* /{TownCard.hotel_list[TownCard.hotel_number].command}"
+        markup = inline.inline_hotel_without_foto()
+        bot.edit_message_text(text, call.message.chat.id, call.message.message_id, reply_markup=markup,
+                              parse_mode='Markdown')
 
 
 @bot.callback_query_handler(func=lambda call: call.data == 'end')
@@ -394,28 +439,32 @@ def saving_history(call: CallbackQuery):
     Сохраняет в базу данных команду и отели.
     :param call: Сообщение из бота
     """
-    days = TownCard.to_date - TownCard.from_date
-    bot.delete_message(call.message.chat.id, call.message.message_id)
-    bot.send_message(call.message.chat.id, f"Последний просмотренный отель:")
-    if TownCard.foto != 0:
-        all_foto = [InputMediaPhoto(TownCard.foto_list[0], caption=HotelCard.hotel_text)]
-        for id_foto in range(1, len(TownCard.foto_list)):
-            all_foto.append(InputMediaPhoto(TownCard.foto_list[id_foto]))
-        bot.send_media_group(call.message.chat.id, all_foto)
-    else:
-        bot.send_message(call.message.chat.id, HotelCard.hotel_text)
-    old_hotels = Hotel.select().where(Hotel.history == True, Hotel.user == UserCard.id).exists()
-    if old_hotels:
-        hotels = Hotel.filter(history=True, user=UserCard.id)
-        for hotel in hotels:
-            hotel.delete_instance()
-    for hotel_count in TownCard.hotel_list:
-        price = hotel_info.check_price(hotel_count, days)
-        hotel = Hotel.select().where(Hotel.favorite == True, Hotel.user == UserCard.id).exists()
-        if not hotel:
-            Hotel.create(user=UserCard.id, command=UserCard.command, town=TownCard.town, name=hotel_count['name'],
-                         price=price[1], link=f"hotels.com/h{hotel_count['id']}.Hotel-Information")
+    if isinstance(TownCard.to_date, datetime.date):
+        days = TownCard.to_date - TownCard.from_date
+        bot.delete_message(call.message.chat.id, call.message.message_id)
+        bot.send_message(call.message.chat.id, f"Последний просмотренный отель:")
+        if TownCard.foto != 0:
+            all_foto = [InputMediaPhoto(TownCard.foto_list[0], caption=HotelCard.hotel_text)]
+            for id_foto in range(1, len(TownCard.foto_list)):
+                all_foto.append(InputMediaPhoto(TownCard.foto_list[id_foto]))
+            bot.send_media_group(call.message.chat.id, all_foto)
         else:
-            hotel.history = True
-            hotel.save()
-    bot.send_message(call.message.chat.id, 'Отели сохранены в историю')
+            bot.send_message(call.message.chat.id, HotelCard.hotel_text)
+        old_hotels = Hotel.select().where(Hotel.history == True, Hotel.user == UserCard.id).exists()
+        if old_hotels:
+            hotels = Hotel.filter(history=True, user=UserCard.id)
+            for hotel in hotels:
+                hotel.delete_instance()
+        for hotel_count in TownCard.hotel_list:
+            price = hotel_info.check_price(hotel_count, days)
+            hotel = Hotel.select().where(Hotel.favorite == True, Hotel.user == UserCard.id).exists()
+            if not hotel:
+                Hotel.create(user=UserCard.id, command=UserCard.command, town=TownCard.town, name=hotel_count['name'],
+                             price=price[1], link=f"hotels.com/h{hotel_count['id']}.Hotel-Information")
+            else:
+                hotel.history = True
+                hotel.save()
+        bot.send_message(call.message.chat.id, 'Отели сохранены в историю')
+    else:
+        bot.delete_message(call.message.chat.id, call.message.message_id)
+        bot.send_message(call.message.chat.id, 'История закрыта')

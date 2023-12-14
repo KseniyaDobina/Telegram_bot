@@ -439,7 +439,7 @@ def saving_history(call: CallbackQuery):
     Сохраняет в базу данных команду и отели.
     :param call: Сообщение из бота
     """
-    if isinstance(TownCard.to_date, datetime.date):
+    if isinstance(TownCard.hotel_list[0], dict):
         days = TownCard.to_date - TownCard.from_date
         bot.delete_message(call.message.chat.id, call.message.message_id)
         bot.send_message(call.message.chat.id, f"Последний просмотренный отель:")

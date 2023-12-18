@@ -39,7 +39,7 @@ class TownCard(StatesGroup):
 
 
 class HotelCard(StatesGroup):
-
+    id_in_API = State()
     hotel_text = State()
     price = State()
     # foto_list = State()

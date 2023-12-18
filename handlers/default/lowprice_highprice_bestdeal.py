@@ -393,7 +393,9 @@ def inline_keyboard_answer(call: CallbackQuery):
                                                           days)
             HotelCard.hotel_text = text
             markup = inline.inline_hotel_without_foto()
-            bot.edit_message_text(HotelCard.hotel_text, call.message.chat.id, call.message.message_id, reply_markup=markup)
+            bot.edit_message_text(
+                HotelCard.hotel_text, call.message.chat.id, call.message.message_id, reply_markup=markup
+            )
         else:
             if call.data.startswith("clickh"):
                 TownCard.hotel_number = int(call.data.split()[1])
@@ -433,6 +435,87 @@ def inline_keyboard_answer(call: CallbackQuery):
                               parse_mode='Markdown')
 
 
+@bot.callback_query_handler(func=lambda call: call.data.startswith("fav"))
+def inline_keyboard_answer(call: CallbackQuery):
+    """
+    Выводит отели.
+    :param call: Сообщение из бота
+    """
+    if call.data.startswith("favd"):
+        if isinstance(TownCard.to_date, int):
+            hotel = Hotel.get(user=UserCard.id, favorite=True,
+                              id_in_API=TownCard.hotel_list[TownCard.hotel_number]['id'])
+
+            # hotel.delete_instance()
+        else:
+            print(123)
+            hotel = Hotel.get(user=UserCard.id, id_in_API=TownCard.hotel_list[TownCard.hotel_number].id_in_API)
+            hotel.favorite = False
+            hotel.save()
+    else:
+        if isinstance(TownCard.to_date, int):
+            Hotel.create(user=UserCard.id, favorite=True, id_in_API=TownCard.hotel_list[TownCard.hotel_number]['id'])
+        else:
+            hotel = Hotel.get(
+                user=UserCard.id, id_in_API=TownCard.hotel_list[TownCard.hotel_number].id_in_API
+            )
+            hotel.favorite = True
+            hotel.save()
+
+    if isinstance(TownCard.to_date, int):
+        days = TownCard.to_date - TownCard.from_date
+        if call.data.startswith("clickwf"):
+            TownCard.hotel_number = int(call.data.split()[1])
+            payload = config.PAYLOAD_HOTEL_DETAIL
+            payload['propertyId'] = str(TownCard.hotel_list[TownCard.hotel_number]['id'])
+            answer = parse.request_to_api(url=config.RAPID_URL + config.THIRD_ENDPOINTS, headers=config.HEADERS,
+                                          params=payload, post=True)
+            price, text = hotel_info.get_info_about_hotel(TownCard.hotel_list[0],
+                                                          answer['data']['propertyInfo']['summary'],
+                                                          days)
+            HotelCard.hotel_text = text
+            markup = inline.inline_hotel_without_foto()
+            bot.edit_message_text(
+                HotelCard.hotel_text, call.message.chat.id, call.message.message_id, reply_markup=markup
+            )
+        else:
+            if call.data.startswith("clickh"):
+                TownCard.hotel_number = int(call.data.split()[1])
+                payload = config.PAYLOAD_HOTEL_DETAIL
+                payload['propertyId'] = str(TownCard.hotel_list[TownCard.hotel_number]['id'])
+                answer = parse.request_to_api(url=config.RAPID_URL + config.THIRD_ENDPOINTS, headers=config.HEADERS,
+                                              params=payload, post=True)
+                price, text = hotel_info.get_info_about_hotel(
+                    TownCard.hotel_list[TownCard.hotel_number],
+                    answer['data']['propertyInfo']['summary'],
+                    days)
+                HotelCard.hotel_text = text
+                TownCard.foto_list = hotel_info.get_foto(
+                    answer['data']['propertyInfo']['propertyGallery']['images'],
+                    TownCard.foto)
+                TownCard.foto_number = 0
+
+            elif call.data.startswith("clickf"):
+                TownCard.foto_number = int(call.data.split()[1])
+            markup = inline.inline_button_hotel_with_foto()
+            media = InputMediaPhoto(TownCard.foto_list[TownCard.foto_number],
+                                    caption=HotelCard.hotel_text)
+            bot.edit_message_media(media, call.message.chat.id, call.message.message_id, reply_markup=markup)
+    else:
+        n = '\n'
+        text = f"*История запросов:*" \
+               f"{n*2}*Отель: {TownCard.hotel_list[TownCard.hotel_number].name}*" \
+               f"{n}Цена в сутки: " \
+               f"*{TownCard.hotel_list[TownCard.hotel_number].price if TownCard.hotel_list[TownCard.hotel_number].price else 'Посмотрите актуальную цену на сайте отеля'}$*" \
+               f"{n}Дата и время ввода добавления: *{TownCard.hotel_list[TownCard.hotel_number].date}*" \
+               f"{n}Ссылка отеля: *{TownCard.hotel_list[TownCard.hotel_number].link}*" \
+               f"{n}Город, в котором производился поиск: *{TownCard.hotel_list[TownCard.hotel_number].town}*" \
+               f"{n}*Команда:* /{TownCard.hotel_list[TownCard.hotel_number].command}"
+        markup = inline.inline_hotel_without_foto()
+        bot.edit_message_text(text, call.message.chat.id, call.message.message_id, reply_markup=markup,
+                              parse_mode='Markdown')
+
+
 @bot.callback_query_handler(func=lambda call: call.data == 'end')
 def saving_history(call: CallbackQuery):
     """
@@ -459,8 +542,9 @@ def saving_history(call: CallbackQuery):
             price = hotel_info.check_price(hotel_count, days)
             hotel = Hotel.select().where(Hotel.favorite == True, Hotel.user == UserCard.id).exists()
             if not hotel:
-                Hotel.create(user=UserCard.id, command=UserCard.command, town=TownCard.town, name=hotel_count['name'],
-                             price=price[1], link=f"hotels.com/h{hotel_count['id']}.Hotel-Information")
+                Hotel.create(id_in_API=hotel_count['id'], user=UserCard.id, command=UserCard.command,
+                             town=TownCard.town, name=hotel_count['name'], price=price[1],
+                             link=f"hotels.com/h{hotel_count['id']}.Hotel-Information")
             else:
                 hotel.history = True
                 hotel.save()

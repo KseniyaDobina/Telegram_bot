@@ -32,6 +32,7 @@ class User(BaseModel):
 
 
 class Hotel(BaseModel):
+    id_in_API = IntegerField()
     user = ForeignKeyField(User)
     command = CharField()
     date = DateField(default=datetime.datetime.now().strftime("%Y-%m-%d %H:%M"))
